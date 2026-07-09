@@ -274,6 +274,25 @@
   .status-low{background:var(--amber);}
   .status-neutral{background:var(--sage);}
 
+  /* ---- Collapsible results sections ---- */
+  .collapsible{border:1px solid var(--line);border-radius:var(--radius);background:var(--card);overflow:hidden;}
+  .collapsible summary{
+    display:flex;align-items:center;justify-content:space-between;gap:16px;
+    padding:20px 26px;cursor:pointer;list-style:none;user-select:none;
+  }
+  .collapsible summary::-webkit-details-marker{display:none;}
+  .collapsible summary::marker{content:'';}
+  .collapsible summary:hover{background:var(--bg);}
+  .collapsible-summary-text h3{font-size:20px;margin:0;}
+  .collapsible-chevron{flex-shrink:0;color:var(--sage);transition:transform .2s ease;}
+  .collapsible[open] .collapsible-chevron{transform:rotate(180deg);}
+  .collapsible-body{padding:0 26px 26px;}
+
+  /* ---- Clickable summary cards ---- */
+  .summary-card-clickable{cursor:pointer;transition:border-color .15s ease;}
+  .summary-card-clickable:hover{border-color:var(--pine);}
+  .summary-card-arrow{color:var(--sage);font-size:16px;}
+
   /* ---- Disease risk context ---- */
   .disclaimer-box{background:#EDEFF2;border:1px solid #D7DCE2;border-radius:10px;padding:14px 16px;font-size:13px;margin-bottom:18px;color:var(--ink);}
   .risk-card{border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin-bottom:14px;}
@@ -773,128 +792,158 @@
     </div>
 
     <div class="summary-grid">
-      <div class="card">
+      <div class="card summary-card-clickable" data-jump="profile">
         <div class="summary-card-head">
           <h4>Profile</h4>
-          <button type="button" class="btn btn-ghost btn-sm" data-jump="profile">Edit</button>
+          <span class="summary-card-arrow">Edit →</span>
         </div>
         <div id="summary-profile"></div>
       </div>
-      <div class="card">
+      <div class="card summary-card-clickable" data-jump="biomarkers">
         <div class="summary-card-head">
           <h4>Latest biomarkers</h4>
-          <button type="button" class="btn btn-ghost btn-sm" data-jump="biomarkers">Edit</button>
+          <span class="summary-card-arrow">Edit →</span>
         </div>
         <div id="summary-biomarkers"></div>
       </div>
-      <div class="card">
+      <div class="card summary-card-clickable" data-jump="habits">
         <div class="summary-card-head">
           <h4>Today's habits</h4>
-          <button type="button" class="btn btn-ghost btn-sm" data-jump="habits">Edit</button>
+          <span class="summary-card-arrow">Edit →</span>
         </div>
         <div id="summary-habits"></div>
       </div>
-      <div class="card">
+      <div class="card summary-card-clickable" data-jump="food">
         <div class="summary-card-head">
           <h4>Today's food</h4>
-          <button type="button" class="btn btn-ghost btn-sm" data-jump="food">Edit</button>
+          <span class="summary-card-arrow">Edit →</span>
         </div>
         <div id="summary-food"></div>
       </div>
     </div>
 
     <div class="section">
-      <div class="section-head">
-        <h3>Biomarker suggestions</h3>
-        <span class="hint">Specific, evidence-informed levers for each marker outside range</span>
-      </div>
-      <div class="card" id="insights-card">
-        <div id="insights-empty" class="empty-state">
-          <div class="display">Nothing to flag yet</div>
-          Log a biomarker entry and this fills in with specific, personalized notes.
+      <details class="collapsible" open>
+        <summary>
+          <div class="collapsible-summary-text">
+            <h3>Biomarker suggestions</h3>
+            <span class="hint">Specific, evidence-informed levers for each marker outside range</span>
+          </div>
+          <svg class="collapsible-chevron" width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </summary>
+        <div class="collapsible-body" id="insights-card">
+          <div id="insights-empty" class="empty-state">
+            <div class="display">Nothing to flag yet</div>
+            Log a biomarker entry and this fills in with specific, personalized notes.
+          </div>
+          <div id="insights-list"></div>
         </div>
-        <div id="insights-list"></div>
-      </div>
+      </details>
     </div>
 
     <div class="section">
-      <div class="section-head">
-        <h3>Lifestyle notes</h3>
-        <span class="hint">Sleep, activity, stress, and macro balance</span>
-      </div>
-      <div class="card" id="lifestyle-insights-card">
-        <div id="lifestyle-insights-empty" class="empty-state">
-          <div class="display">Nothing to flag yet</div>
-          Log habits or a meal and this fills in with specific notes.
+      <details class="collapsible">
+        <summary>
+          <div class="collapsible-summary-text">
+            <h3>Lifestyle notes</h3>
+            <span class="hint">Sleep, activity, stress, and macro balance</span>
+          </div>
+          <svg class="collapsible-chevron" width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </summary>
+        <div class="collapsible-body" id="lifestyle-insights-card">
+          <div id="lifestyle-insights-empty" class="empty-state">
+            <div class="display">Nothing to flag yet</div>
+            Log habits or a meal and this fills in with specific notes.
+          </div>
+          <div id="lifestyle-insights-list"></div>
         </div>
-        <div id="lifestyle-insights-list"></div>
-      </div>
+      </details>
     </div>
 
     <div class="section">
-      <div class="section-head">
-        <h3>Recommended next steps</h3>
-        <span class="hint">Based on today's data</span>
-      </div>
-      <div class="card">
-        <div id="next-steps-empty" class="empty-state">
-          <div class="display">Nothing to suggest right now</div>
-          Log your habits and a meal, and this fills in if extra support would help.
+      <details class="collapsible">
+        <summary>
+          <div class="collapsible-summary-text">
+            <h3>Recommended next steps</h3>
+            <span class="hint">Based on today's data</span>
+          </div>
+          <svg class="collapsible-chevron" width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </summary>
+        <div class="collapsible-body">
+          <div id="next-steps-empty" class="empty-state">
+            <div class="display">Nothing to suggest right now</div>
+            Log your habits and a meal, and this fills in if extra support would help.
+          </div>
+          <div id="next-steps-list"></div>
         </div>
-        <div id="next-steps-list"></div>
-      </div>
+      </details>
     </div>
 
     <div class="section">
-      <div class="section-head">
-        <h3>Disease risk context</h3>
-        <span class="hint">Research associations, not a diagnosis</span>
-      </div>
-      <div class="card">
-        <div class="disclaimer-box">
-          This section summarizes general, population-level research linking the biomarkers you've logged to broader disease categories. It is <strong>not</strong> a diagnostic test, screening tool, or personalized risk score — and it can't assess your actual risk of cancer or Alzheimer's disease, which require specific clinical tests, genetic counseling, and your doctor's judgment. See the screening notes in each card for what real risk assessment actually looks like.
+      <details class="collapsible">
+        <summary>
+          <div class="collapsible-summary-text">
+            <h3>Disease risk context</h3>
+            <span class="hint">Research associations, not a diagnosis</span>
+          </div>
+          <svg class="collapsible-chevron" width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </summary>
+        <div class="collapsible-body">
+          <div class="disclaimer-box">
+            This section summarizes general, population-level research linking the biomarkers you've logged to broader disease categories. It is <strong>not</strong> a diagnostic test, screening tool, or personalized risk score, and it can't assess your actual risk of cancer or Alzheimer's disease, which require specific clinical tests, genetic counseling, and your doctor's judgment. See the screening notes in each card for what real risk assessment actually looks like.
+          </div>
+          <div id="disease-risk-empty" class="empty-state">
+            <div class="display">Nothing to show yet</div>
+            Log a biomarker entry and this fills in with research-based context.
+          </div>
+          <div id="disease-risk-list"></div>
         </div>
-        <div id="disease-risk-empty" class="empty-state">
-          <div class="display">Nothing to show yet</div>
-          Log a biomarker entry and this fills in with research-based context.
-        </div>
-        <div id="disease-risk-list"></div>
-      </div>
+      </details>
     </div>
 
     <div class="section">
-      <div class="section-head">
-        <h3>Trend over time</h3>
-        <span class="hint">Last 20 entries</span>
-      </div>
-      <div class="card">
-        <div class="chart-wrap"><canvas id="trend-chart"></canvas></div>
-        <div id="chart-empty" class="empty-state hidden">
-          <div class="display">Nothing plotted yet</div>
-          Add at least two entries to start seeing a trend line.
+      <details class="collapsible" id="trend-details">
+        <summary>
+          <div class="collapsible-summary-text">
+            <h3>Trend over time</h3>
+            <span class="hint">Last 20 entries</span>
+          </div>
+          <svg class="collapsible-chevron" width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </summary>
+        <div class="collapsible-body">
+          <div class="chart-wrap"><canvas id="trend-chart"></canvas></div>
+          <div id="chart-empty" class="empty-state hidden">
+            <div class="display">Nothing plotted yet</div>
+            Add at least two entries to start seeing a trend line.
+          </div>
         </div>
-      </div>
+      </details>
     </div>
 
     <div class="section">
-      <div class="section-head">
-        <h3>Recent entries</h3>
-        <span class="hint">Most recent first</span>
-      </div>
-      <div class="card">
-        <div id="history-empty" class="empty-state hidden">
-          <div class="display">No entries yet</div>
-          Your logged biomarkers and habits will show up here.
+      <details class="collapsible">
+        <summary>
+          <div class="collapsible-summary-text">
+            <h3>Recent entries</h3>
+            <span class="hint">Most recent first</span>
+          </div>
+          <svg class="collapsible-chevron" width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </summary>
+        <div class="collapsible-body">
+          <div id="history-empty" class="empty-state hidden">
+            <div class="display">No entries yet</div>
+            Your logged biomarkers and habits will show up here.
+          </div>
+          <div style="overflow-x:auto;">
+            <table id="history-table">
+              <thead>
+                <tr><th>Date</th><th>Type</th><th>Key values</th><th>Score</th></tr>
+              </thead>
+              <tbody id="history-body"></tbody>
+            </table>
+          </div>
         </div>
-        <div style="overflow-x:auto;">
-          <table id="history-table">
-            <thead>
-              <tr><th>Date</th><th>Type</th><th>Key values</th><th>Score</th></tr>
-            </thead>
-            <tbody id="history-body"></tbody>
-          </table>
-        </div>
-      </div>
+      </details>
     </div>
 
     <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px;">
@@ -1428,7 +1477,8 @@ async function saveBiomarkers(){
   if(hasAnyValue){
     // Update today's existing entry instead of inserting a duplicate,
     // since this now runs automatically every time you leave the step.
-    const { data: existing } = await sb.from('biomarkers').select('id').eq('user_id', currentUser.id).eq('date', date).maybeSingle();
+    const { data: existingRows } = await sb.from('biomarkers').select('id').eq('user_id', currentUser.id).eq('date', date).order('created_at', {ascending:false}).limit(1);
+    const existing = existingRows && existingRows[0];
     const { error } = existing
       ? await sb.from('biomarkers').update(row).eq('id', existing.id)
       : await sb.from('biomarkers').insert(row);
@@ -1468,7 +1518,8 @@ async function saveHabits(){
   };
   // Update today's existing entry instead of inserting a duplicate, since
   // this now runs automatically every time you leave the step.
-  const { data: existing } = await sb.from('habits').select('id').eq('user_id', currentUser.id).eq('date', date).maybeSingle();
+  const { data: existingRows } = await sb.from('habits').select('id').eq('user_id', currentUser.id).eq('date', date).order('created_at', {ascending:false}).limit(1);
+  const existing = existingRows && existingRows[0];
   const { error } = existing
     ? await sb.from('habits').update(row).eq('id', existing.id)
     : await sb.from('habits').insert(row);
@@ -2043,7 +2094,9 @@ function renderStep(stepName, data){
     renderBiomarkerSummary(biomarkers);
     renderHabitSummary(habits);
     renderFoodSummary(foodTotalsByDate, macroTargets);
-    renderChart(biomarkers, habits, foodTotalsByDate, macroTargets);
+    if(document.getElementById('trend-details').open){
+      renderChart(biomarkers, habits, foodTotalsByDate, macroTargets);
+    }
     renderHistory(biomarkers, habits);
     renderBiomarkerInsights(biomarkers);
     renderLifestyleInsights(habits, foodTotalsByDate, macroTargets);
@@ -2052,10 +2105,21 @@ function renderStep(stepName, data){
   }
 }
 
+let lastFetchedData = null;
 async function refreshAndRender(stepName){
   const data = await fetchAllData();
+  lastFetchedData = data;
   renderStep(stepName, data);
 }
+
+// Chart.js needs its canvas visible to size correctly, so the trend chart
+// only draws once its collapsible section is actually opened, using
+// whatever data was last fetched rather than triggering a new query.
+document.getElementById('trend-details').addEventListener('toggle', (e)=>{
+  if(e.target.open && lastFetchedData){
+    renderChart(lastFetchedData.biomarkers, lastFetchedData.habits, lastFetchedData.foodTotalsByDate, lastFetchedData.macroTargets);
+  }
+});
 
 /* ============ FOOD JOURNAL RENDER ============ */
 function renderFoodJournal(foodLogs, macroTargets){
