@@ -1083,10 +1083,14 @@ function buildFoodTotalsByDate(foodLogs){
 }
 
 /* ============ AUTH ============ */
+// Always redirect to a clean URL (no leftover hash/query) so retried
+// sign-in attempts never accumulate stale tokens from a previous attempt.
+const CLEAN_REDIRECT_URL = window.location.origin + window.location.pathname;
+
 document.getElementById('google-auth-btn').addEventListener('click', async ()=>{
   const { error } = await sb.auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo: window.location.href }
+    options: { redirectTo: CLEAN_REDIRECT_URL }
   });
   if(error){
     const errBox = document.getElementById('auth-error');
@@ -1098,7 +1102,7 @@ document.getElementById('google-auth-btn').addEventListener('click', async ()=>{
 document.getElementById('apple-auth-btn').addEventListener('click', async ()=>{
   const { error } = await sb.auth.signInWithOAuth({
     provider: 'apple',
-    options: { redirectTo: window.location.href }
+    options: { redirectTo: CLEAN_REDIRECT_URL }
   });
   if(error){
     const errBox = document.getElementById('auth-error');
@@ -1305,6 +1309,33 @@ document.getElementById('find-genetic-testing-btn').addEventListener('click', fu
     <a href="https://precivityad.com/order-the-test" target="_blank" rel="noopener" style="color:var(--pine-dark);font-weight:600;font-size:13px;">PrecivityAD — ordering information →</a>
   `);
 });
+
+// Manually handle OAuth/magic-link redirects that land with a token in the
+// URL hash. We do this ourselves instead of relying only on Supabase's
+// automatic session detection, since that can silently fail to pick up
+// the session on some static-hosting setups (as seen with GitHub Pages here).
+(async () => {
+  const hash = window.location.hash;
+  if (hash && hash.includes('access_token')) {
+    // Defend against a stacked/malformed hash (e.g. multiple #access_token=
+    // fragments from repeated retries before this fix) by only reading up
+    // to the first extra '#' in the fragment.
+    const cleanHash = hash.slice(1).split('#')[0];
+    const params = new URLSearchParams(cleanHash);
+    const access_token = params.get('access_token');
+    const refresh_token = params.get('refresh_token');
+    if (access_token && refresh_token) {
+      const { data, error } = await sb.auth.setSession({ access_token, refresh_token });
+      // Clean the token out of the address bar either way, successful or not
+      history.replaceState(null, '', window.location.pathname + window.location.search);
+      if (error) {
+        showToast('Sign-in error: ' + error.message);
+      } else if (data.session && !currentUser) {
+        await initApp(data.session.user);
+      }
+    }
+  }
+})();
 
 // check existing session on load
 (async ()=>{
