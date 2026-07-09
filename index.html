@@ -9,6 +9,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600;6..72,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/tesseract.min.js"></script>
 <style>
   :root{
     --bg: #F3F4F6;
@@ -321,9 +323,9 @@
       </div>
     </div>
 
-    <div class="home-eyebrow">Biomarker-first longevity tracking</div>
-    <h1 class="home-headline">Your bloodwork, turned into a clear picture of how you're aging.</h1>
-    <p class="home-sub">Biomarq takes the labs you already have, glucose, lipids, inflammation, and more, and turns them into an estimated biological age, specific suggestions for improving out-of-range markers, and honest research context on cardiometabolic, cardiovascular, cognitive, and cancer risk. Lifestyle and nutrition are tracked too, as supporting context to the biomarkers that lead.</p>
+    <div class="home-eyebrow">Your labs, decoded</div>
+    <h1 class="home-headline">Stop guessing how you're aging. Know it.</h1>
+    <p class="home-sub">Biomarq takes the labs you already have, glucose, lipids, inflammation, and more, and turns them into an estimated biological age, sharp suggestions for fixing what's off, and honest context on your cardiometabolic, cardiovascular, cognitive, and cancer risk. Lifestyle and nutrition come along for the ride, as support, not the headline.</p>
 
     <div class="home-features">
       <div class="home-feature">
@@ -474,6 +476,19 @@
         </div>
         <button type="button" class="btn btn-ghost btn-sm" id="find-lab-btn">Find a lab near me</button>
       </div>
+    </div>
+    <div class="card" style="margin-bottom:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;">
+        <div>
+          <div class="display" style="font-size:15px;margin-bottom:2px;">Have a lab report already?</div>
+          <div style="font-size:13px;color:var(--sage);">Upload a PDF or photo and we'll try to fill in the fields below.</div>
+        </div>
+        <div>
+          <input type="file" id="lab-upload-input" accept=".pdf,image/*" class="hidden">
+          <button type="button" class="btn btn-ghost btn-sm" id="lab-upload-btn">Upload labs</button>
+        </div>
+      </div>
+      <div id="lab-upload-status"></div>
     </div>
     <div class="card">
       <form id="biomarker-form">
@@ -827,6 +842,25 @@
       <details class="collapsible" open>
         <summary>
           <div class="collapsible-summary-text">
+            <h3>Recommended next steps</h3>
+            <span class="hint">Based on today's data</span>
+          </div>
+          <svg class="collapsible-chevron" width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </summary>
+        <div class="collapsible-body">
+          <div id="next-steps-empty" class="empty-state">
+            <div class="display">Nothing to suggest right now</div>
+            Log your habits and a meal, and this fills in if extra support would help.
+          </div>
+          <div id="next-steps-list"></div>
+        </div>
+      </details>
+    </div>
+
+    <div class="section">
+      <details class="collapsible" open>
+        <summary>
+          <div class="collapsible-summary-text">
             <h3>Biomarker suggestions</h3>
             <span class="hint">Specific, evidence-informed levers for each marker outside range</span>
           </div>
@@ -857,25 +891,6 @@
             Log habits or a meal and this fills in with specific notes.
           </div>
           <div id="lifestyle-insights-list"></div>
-        </div>
-      </details>
-    </div>
-
-    <div class="section">
-      <details class="collapsible">
-        <summary>
-          <div class="collapsible-summary-text">
-            <h3>Recommended next steps</h3>
-            <span class="hint">Based on today's data</span>
-          </div>
-          <svg class="collapsible-chevron" width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </summary>
-        <div class="collapsible-body">
-          <div id="next-steps-empty" class="empty-state">
-            <div class="display">Nothing to suggest right now</div>
-            Log your habits and a meal, and this fills in if extra support would help.
-          </div>
-          <div id="next-steps-list"></div>
         </div>
       </details>
     </div>
@@ -1298,6 +1313,118 @@ document.querySelectorAll('.step-dot').forEach(dot=>{
 });
 
 /* ============ FIND A LAB ============ */
+/* ============ UPLOAD LABS (PDF / photo parsing) ============ */
+if(window.pdfjsLib){
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+}
+
+// Each entry: the biomarker form field id, a human label for the summary,
+// and one or more regexes that look for the lab's name near a number in
+// extracted report text. Best-effort matching — always meant to be
+// reviewed, not trusted blindly, since OCR and report formats vary a lot.
+const LAB_PARSE_PATTERNS = [
+  { id:'bio-glucose', label:'Fasting glucose', patterns:[/(?:fasting\s+)?glucose[^\d\-]{0,20}(\d{2,3}(?:\.\d+)?)/i] },
+  { id:'bio-hba1c', label:'HbA1c', patterns:[/(?:hemoglobin\s+)?a1c[^\d\-]{0,20}(\d(?:\.\d+)?)/i] },
+  { id:'bio-insulin', label:'Fasting insulin', patterns:[/(?:fasting\s+)?insulin[^\d\-]{0,20}(\d{1,3}(?:\.\d+)?)/i] },
+  { id:'bio-hdl', label:'HDL', patterns:[/hdl(?:[\s\-]cholesterol)?[^\d\-]{0,20}(\d{2,3}(?:\.\d+)?)/i] },
+  { id:'bio-ldl', label:'LDL', patterns:[/ldl(?:[\s\-]cholesterol)?[^\d\-]{0,20}(\d{2,3}(?:\.\d+)?)/i] },
+  { id:'bio-apob', label:'ApoB', patterns:[/apo(?:lipoprotein)?[\s\-]?b[^\d\-]{0,20}(\d{2,3}(?:\.\d+)?)/i] },
+  { id:'bio-lpa', label:'Lp(a)', patterns:[/lp\s*\(?a\)?[^\d\-]{0,20}(\d{1,3}(?:\.\d+)?)/i] },
+  { id:'bio-trig', label:'Triglycerides', patterns:[/triglycerides[^\d\-]{0,20}(\d{2,4}(?:\.\d+)?)/i] },
+  { id:'bio-crp', label:'CRP', patterns:[/(?:c-?reactive protein|\bcrp\b)[^\d\-]{0,20}(\d+(?:\.\d+)?)/i] },
+  { id:'bio-homocysteine', label:'Homocysteine', patterns:[/homocysteine[^\d\-]{0,20}(\d+(?:\.\d+)?)/i] },
+  { id:'bio-vitd', label:'Vitamin D', patterns:[/vitamin\s*d(?:,?\s*25[\-\s]?oh)?[^\d\-]{0,25}(\d{1,3}(?:\.\d+)?)/i] },
+  { id:'bio-systolic', label:'Systolic BP', patterns:[/(\d{2,3})\s*\/\s*\d{2,3}\s*mm\s*hg/i, /blood pressure[^\d]{0,10}(\d{2,3})\s*\/\s*\d{2,3}/i] },
+  { id:'bio-diastolic', label:'Diastolic BP', patterns:[/\d{2,3}\s*\/\s*(\d{2,3})\s*mm\s*hg/i, /blood pressure[^\d]{0,10}\d{2,3}\s*\/\s*(\d{2,3})/i] },
+  { id:'bio-rhr', label:'Resting heart rate', patterns:[/(?:resting\s+)?heart rate[^\d\-]{0,20}(\d{2,3})/i] },
+  { id:'bio-psa', label:'PSA', patterns:[/\bpsa\b[^\d\-]{0,20}(\d+(?:\.\d+)?)/i] },
+  { id:'bio-ca125', label:'CA-125', patterns:[/ca[\-\s]?125[^\d\-]{0,20}(\d+(?:\.\d+)?)/i] },
+  { id:'bio-cea', label:'CEA', patterns:[/\bcea\b[^\d\-]{0,20}(\d+(?:\.\d+)?)/i] },
+  { id:'bio-ca199', label:'CA 19-9', patterns:[/ca[\-\s]?19[\-\s]?9[^\d\-]{0,20}(\d+(?:\.\d+)?)/i] },
+  { id:'bio-afp', label:'AFP', patterns:[/\bafp\b[^\d\-]{0,20}(\d+(?:\.\d+)?)/i] },
+];
+
+function parseLabText(text){
+  const found = [];
+  LAB_PARSE_PATTERNS.forEach(({id, label, patterns})=>{
+    for(const re of patterns){
+      const match = text.match(re);
+      if(match && match[1]){
+        const field = document.getElementById(id);
+        // Don't overwrite something already filled in on this form
+        if(field && field.value === ''){
+          field.value = match[1];
+          found.push(label);
+        }
+        break;
+      }
+    }
+  });
+  return found;
+}
+
+async function extractTextFromPdf(file){
+  const buffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+  let text = '';
+  for(let i = 1; i <= pdf.numPages; i++){
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    text += content.items.map(item => item.str).join(' ') + '\n';
+  }
+  return text;
+}
+
+async function extractTextFromImage(file, onProgress){
+  const { data } = await Tesseract.recognize(file, 'eng', {
+    logger: m => { if(m.status === 'recognizing text' && onProgress) onProgress(Math.round(m.progress*100)); }
+  });
+  return data.text;
+}
+
+document.getElementById('lab-upload-btn').addEventListener('click', ()=>{
+  document.getElementById('lab-upload-input').click();
+});
+
+document.getElementById('lab-upload-input').addEventListener('change', async (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const statusEl = document.getElementById('lab-upload-status');
+  statusEl.innerHTML = `<div class="field-note" style="margin-top:12px;">Reading your file…</div>`;
+
+  try{
+    let text = '';
+    if(file.type === 'application/pdf'){
+      text = await extractTextFromPdf(file);
+      // Some PDFs are scanned images with no real text layer — fall back to OCR
+      if(text.trim().length < 20){
+        statusEl.innerHTML = `<div class="field-note" style="margin-top:12px;">No selectable text found — running OCR instead, this can take a moment…</div>`;
+        text = await extractTextFromImage(file, pct => {
+          statusEl.innerHTML = `<div class="field-note" style="margin-top:12px;">Running OCR… ${pct}%</div>`;
+        });
+      }
+    } else if(file.type.startsWith('image/')){
+      text = await extractTextFromImage(file, pct => {
+        statusEl.innerHTML = `<div class="field-note" style="margin-top:12px;">Running OCR… ${pct}%</div>`;
+      });
+    } else {
+      statusEl.innerHTML = `<div class="field-note" style="margin-top:12px;color:var(--danger);">Unsupported file type — please upload a PDF or a photo (JPG/PNG).</div>`;
+      return;
+    }
+
+    const found = parseLabText(text);
+    if(found.length === 0){
+      statusEl.innerHTML = `<div class="field-note" style="margin-top:12px;">Couldn't confidently match any values in that file. You can still enter them manually below, or try a clearer photo/PDF.</div>`;
+    } else {
+      statusEl.innerHTML = `<div class="field-note" style="margin-top:12px;color:var(--good);">Found and filled in ${found.length} value${found.length>1?'s':''}: ${found.join(', ')}. Double-check these against your actual report before continuing — automatic reading isn't perfect.</div>`;
+    }
+  } catch(err){
+    statusEl.innerHTML = `<div class="field-note" style="margin-top:12px;color:var(--danger);">Couldn't read that file (${err.message}). Try a clearer photo, a different PDF, or enter values manually below.</div>`;
+  } finally {
+    e.target.value = ''; // allow re-uploading the same file again if needed
+  }
+});
+
 document.getElementById('find-lab-btn').addEventListener('click', ()=>{
   const existing = document.getElementById('lab-finder-panel');
   if(existing){ existing.remove(); return; }
