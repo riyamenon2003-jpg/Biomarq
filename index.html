@@ -833,6 +833,20 @@
 
     <div class="section">
       <div class="section-head">
+        <h3>Recommended next steps</h3>
+        <span class="hint">Based on today's data</span>
+      </div>
+      <div class="card">
+        <div id="next-steps-empty" class="empty-state">
+          <div class="display">Nothing to suggest right now</div>
+          Log your habits and a meal, and this fills in if extra support would help.
+        </div>
+        <div id="next-steps-list"></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head">
         <h3>Disease risk context</h3>
         <span class="hint">Research associations, not a diagnosis</span>
       </div>
@@ -1918,6 +1932,104 @@ function renderDiseaseRiskContext(biomarkers){
   }).join('');
 }
 
+/* ============ RECOMMENDED NEXT STEPS ============ */
+// Generic geolocation-based "find a nearby professional" button, reused for
+// both the dietitian and personal trainer suggestions below.
+function wireProximitySearchButton(btn, panelId, mapsQuery, directoryLabel, directoryUrl, loadingLabel){
+  btn.addEventListener('click', ()=>{
+    const existing = document.getElementById(panelId);
+    if(existing){ existing.remove(); return; }
+
+    const panel = document.createElement('div');
+    panel.id = panelId;
+    panel.className = 'card';
+    panel.style.marginTop = '12px';
+    panel.innerHTML = `<div class="field-note">${loadingLabel}</div>`;
+    btn.insertAdjacentElement('afterend', panel);
+
+    const directoryLink = `<a href="${directoryUrl}" target="_blank" rel="noopener" style="color:var(--pine-dark);font-weight:600;font-size:13px;">${directoryLabel} →</a>`;
+    const renderFallback = () => {
+      panel.innerHTML = `<div class="field-note" style="margin-bottom:10px;">Search a credentialed directory instead:</div>${directoryLink}`;
+    };
+
+    if(!navigator.geolocation){ renderFallback(); return; }
+    navigator.geolocation.getCurrentPosition(
+      (pos)=>{
+        const { latitude, longitude } = pos.coords;
+        const mapsUrl = `https://www.google.com/maps/search/${encodeURIComponent(mapsQuery)}/@${latitude},${longitude},13z`;
+        panel.innerHTML = `
+          <div class="field-note" style="margin-bottom:10px;">Here's a map of options near your current location:</div>
+          <a href="${mapsUrl}" target="_blank" rel="noopener" class="btn btn-primary btn-sm" style="display:inline-block;text-decoration:none;">Open nearby results in Google Maps</a>
+          <div class="field-note" style="margin-top:14px;">Or search a credentialed directory instead:</div>
+          ${directoryLink}
+        `;
+      },
+      ()=>{ renderFallback(); },
+      { timeout: 8000 }
+    );
+  });
+}
+
+function renderNextSteps(habits, foodTotalsByDate, macroTargets){
+  const latestHabit = habits[habits.length-1];
+  const today = todayStr();
+  const todayFood = foodTotalsByDate ? foodTotalsByDate[today] : null;
+  const suggestions = [];
+
+  if(todayFood){
+    const dietScore = macroTargets ? computeDietGoalScore(todayFood, macroTargets) : computeDietBalanceScore(todayFood);
+    if(dietScore !== null && dietScore < 70){
+      suggestions.push({
+        type: 'dietitian',
+        title: 'Consider working with a registered dietitian',
+        body: "Today's food log suggests your macros are off from where they'd ideally be. A registered dietitian can build a plan tailored to your own biomarkers and goals, well beyond what a general macro calculator can do.",
+      });
+    }
+  }
+
+  if(latestHabit && latestHabit.exercise_minutes !== null && latestHabit.exercise_minutes !== undefined && latestHabit.exercise_minutes < 20){
+    suggestions.push({
+      type: 'trainer',
+      title: 'Consider working with a personal trainer',
+      body: `You logged ${latestHabit.exercise_minutes} minutes of activity today. A certified personal trainer can help build a sustainable routine and keep you accountable, especially if getting started is the hardest part.`,
+    });
+  }
+
+  const listEl = document.getElementById('next-steps-list');
+  const emptyEl = document.getElementById('next-steps-empty');
+  listEl.innerHTML = '';
+
+  if(suggestions.length === 0){
+    emptyEl.classList.remove('hidden');
+    return;
+  }
+  emptyEl.classList.add('hidden');
+
+  suggestions.forEach((s, i)=>{
+    const btnId = `next-step-btn-${i}`;
+    const div = document.createElement('div');
+    div.className = 'risk-card';
+    div.innerHTML = `
+      <div class="risk-card-title">${s.title}</div>
+      <div class="risk-card-body">${s.body}</div>
+      <button type="button" class="btn btn-ghost btn-sm" id="${btnId}" style="margin-top:6px;">
+        ${s.type === 'dietitian' ? 'Find a dietitian near me' : 'Find a personal trainer near me'}
+      </button>
+    `;
+    listEl.appendChild(div);
+    const btn = document.getElementById(btnId);
+    if(s.type === 'dietitian'){
+      wireProximitySearchButton(btn, 'dietitian-finder-panel', 'registered dietitian',
+        'Academy of Nutrition and Dietetics — find a nutrition expert', 'https://www.eatright.org/find-a-nutrition-expert',
+        'Looking for dietitians near you…');
+    } else {
+      wireProximitySearchButton(btn, 'trainer-finder-panel', 'personal trainer',
+        'ACE Fitness — find a certified pro', 'https://www.acefitness.org/resources/everyone/find-ace-pro/',
+        'Looking for personal trainers near you…');
+    }
+  });
+}
+
 function renderStep(stepName, data){
   const { biomarkers, habits, foodLogs, foodTotalsByDate, macroTargets } = data;
   if(stepName === 'food'){
@@ -1936,6 +2048,7 @@ function renderStep(stepName, data){
     renderBiomarkerInsights(biomarkers);
     renderLifestyleInsights(habits, foodTotalsByDate, macroTargets);
     renderDiseaseRiskContext(biomarkers);
+    renderNextSteps(habits, foodTotalsByDate, macroTargets);
   }
 }
 
