@@ -431,10 +431,7 @@
           </div>
         </div>
 
-        <div class="field-note" style="margin-top:16px;">This powers your macro goals and the biological age estimate on the results page — an estimate, not a medical prescription.</div>
-        <div class="form-actions">
-          <button type="submit" class="btn btn-primary">Save profile</button>
-        </div>
+        <div class="field-note" style="margin-top:16px;">This powers your macro goals and the biological age estimate on the results page. An estimate, not a medical prescription. Your info saves automatically as you move to the next step.</div>
       </form>
     </div>
     <div class="wizard-nav">
@@ -591,10 +588,7 @@
           </div>
         </details>
 
-        <div class="field-note" style="margin-top:16px;">Leave any field blank if you don't have that value yet — the score adjusts to what you provide.</div>
-        <div class="form-actions">
-          <button type="submit" class="btn btn-primary">Save biomarkers</button>
-        </div>
+        <div class="field-note" style="margin-top:16px;">Leave any field blank if you don't have that value yet. The score adjusts to what you provide. Your info saves automatically as you move to the next step.</div>
       </form>
     </div>
     <div class="wizard-nav">
@@ -643,9 +637,6 @@
               <span class="range-val mono" id="habit-stress-val">3 / 5</span>
             </div>
           </div>
-        </div>
-        <div class="form-actions">
-          <button type="submit" class="btn btn-primary">Save habits</button>
         </div>
       </form>
     </div>
@@ -1204,14 +1195,24 @@ function showStep(name){
   if(currentUser) refreshAndRender(name);
 }
 
+// Auto-save whichever step's data you're leaving, so there's no separate
+// "Save" button to remember to click before moving on.
+const STEP_SAVERS = { profile: saveProfile, biomarkers: saveBiomarkers, habits: saveHabits };
+async function saveCurrentStepIfNeeded(){
+  const saver = STEP_SAVERS[currentStepName];
+  if(saver) await saver();
+}
+
 document.querySelectorAll('[data-next]').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
+  btn.addEventListener('click', async ()=>{
+    await saveCurrentStepIfNeeded();
     if(returnToResults){ returnToResults = false; showStep('results'); }
     else showStep(btn.dataset.next);
   });
 });
 document.querySelectorAll('[data-back]').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
+  btn.addEventListener('click', async ()=>{
+    await saveCurrentStepIfNeeded();
     if(returnToResults){ returnToResults = false; showStep('results'); }
     else showStep(btn.dataset.back);
   });
@@ -1225,8 +1226,9 @@ document.querySelectorAll('[data-jump]').forEach(btn=>{
 // step dots double as shortcuts once a step has been visited
 document.querySelectorAll('.step-dot').forEach(dot=>{
   dot.style.cursor = 'pointer';
-  dot.addEventListener('click', ()=>{
+  dot.addEventListener('click', async ()=>{
     if(dot.classList.contains('active') || dot.classList.contains('done')){
+      await saveCurrentStepIfNeeded();
       returnToResults = false;
       showStep(dot.dataset.step);
     }
@@ -1378,12 +1380,12 @@ document.getElementById('habit-stress').addEventListener('input', e=>{
 });
 
 /* ============ FORM SUBMISSIONS ============ */
-document.getElementById('biomarker-form').addEventListener('submit', async (e)=>{
-  e.preventDefault();
+async function saveBiomarkers(){
   const val = id => { const v = document.getElementById(id).value; return v === '' ? null : parseFloat(v); };
+  const date = document.getElementById('bio-date').value;
   const row = {
     user_id: currentUser.id,
-    date: document.getElementById('bio-date').value,
+    date,
     fasting_glucose: val('bio-glucose'),
     hba1c: val('bio-hba1c'),
     fasting_insulin: val('bio-insulin'),
@@ -1405,8 +1407,19 @@ document.getElementById('biomarker-form').addEventListener('submit', async (e)=>
     afp: val('bio-afp'),
     mcd_result: document.getElementById('bio-mcd').value || null,
   };
-  const { error } = await sb.from('biomarkers').insert(row);
-  if(error){ showToast('Error: ' + error.message); return; }
+
+  // Only touch the biomarkers table if something was actually entered —
+  // auto-saving on every step change shouldn't create empty rows.
+  const hasAnyValue = Object.keys(row).some(k => k !== 'user_id' && k !== 'date' && row[k] !== null);
+  if(hasAnyValue){
+    // Update today's existing entry instead of inserting a duplicate,
+    // since this now runs automatically every time you leave the step.
+    const { data: existing } = await sb.from('biomarkers').select('id').eq('user_id', currentUser.id).eq('date', date).maybeSingle();
+    const { error } = existing
+      ? await sb.from('biomarkers').update(row).eq('id', existing.id)
+      : await sb.from('biomarkers').insert(row);
+    if(error){ showToast('Error: ' + error.message); return; }
+  }
 
   // Genetic testing & family history live in this same form but belong to
   // the profiles table, and shouldn't be wiped on every biomarker save —
@@ -1424,32 +1437,32 @@ document.getElementById('biomarker-form').addEventListener('submit', async (e)=>
   if(profileError){ showToast('Error saving genetic info: ' + profileError.message); }
   if(currentProfile) Object.assign(currentProfile, geneticRow);
 
-  showToast('Biomarkers saved');
-  // Reset only the per-date lab value fields, not the date itself and not
-  // the genetic/family history add-on further down in this same form.
-  ['bio-glucose','bio-hba1c','bio-insulin','bio-hdl','bio-ldl','bio-apob','bio-lpa',
-   'bio-trig','bio-crp','bio-homocysteine','bio-vitd','bio-systolic','bio-diastolic','bio-rhr',
-   'bio-psa','bio-ca125','bio-cea','bio-ca199','bio-afp'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('bio-mcd').value = '';
-  document.getElementById('bio-date').value = todayStr();
+  if(hasAnyValue) showToast('Biomarkers saved');
   await refreshAndRender(currentStepName);
-});
+}
+document.getElementById('biomarker-form').addEventListener('submit', e => e.preventDefault());
 
-document.getElementById('habit-form').addEventListener('submit', async (e)=>{
-  e.preventDefault();
+async function saveHabits(){
+  const date = document.getElementById('habit-date').value;
   const row = {
     user_id: currentUser.id,
-    date: document.getElementById('habit-date').value,
+    date,
     sleep_hours: parseFloat(document.getElementById('habit-sleep').value),
     exercise_minutes: parseFloat(document.getElementById('habit-exercise').value),
     exercise_type: document.getElementById('habit-exercise-type').value,
     stress_level: parseInt(document.getElementById('habit-stress').value),
   };
-  const { error } = await sb.from('habits').insert(row);
+  // Update today's existing entry instead of inserting a duplicate, since
+  // this now runs automatically every time you leave the step.
+  const { data: existing } = await sb.from('habits').select('id').eq('user_id', currentUser.id).eq('date', date).maybeSingle();
+  const { error } = existing
+    ? await sb.from('habits').update(row).eq('id', existing.id)
+    : await sb.from('habits').insert(row);
   if(error){ showToast('Error: ' + error.message); return; }
   showToast('Habits saved');
   await refreshAndRender(currentStepName);
-});
+}
+document.getElementById('habit-form').addEventListener('submit', e => e.preventDefault());
 
 /* ============ PROFILE + MACRO TARGETS ============ */
 let currentProfile = null; // {sex, age, weight_lb, height_ft, height_in}
@@ -1474,8 +1487,7 @@ async function loadProfile(){
   }
 }
 
-document.getElementById('profile-form').addEventListener('submit', async (e)=>{
-  e.preventDefault();
+async function saveProfile(){
   const row = {
     user_id: currentUser.id,
     sex: document.getElementById('profile-sex').value,
@@ -1497,7 +1509,8 @@ document.getElementById('profile-form').addEventListener('submit', async (e)=>{
   currentProfile = row;
   showToast('Profile saved');
   await refreshAndRender(currentStepName);
-});
+}
+document.getElementById('profile-form').addEventListener('submit', e => e.preventDefault());
 
 /* Mifflin-St Jeor BMR + activity multiplier derived from recent logged
    exercise, scaled into daily calorie and macro targets. Protein target
