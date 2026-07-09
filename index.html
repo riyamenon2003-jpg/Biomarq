@@ -253,6 +253,7 @@
   .step-dot.active .step-num{background:var(--pine);border-color:var(--pine);color:#fff;}
   .step-dot.active .step-label{color:var(--ink);font-weight:600;}
   .step-dot.done .step-num{background:var(--pine-dark);border-color:var(--pine-dark);color:#fff;}
+  .step-dot:hover .step-num{border-color:var(--pine);}
   @media(max-width:560px){ .step-label{display:none;} }
 
   .wizard-step{max-width:720px;margin:0 auto;}
@@ -1286,15 +1287,13 @@ document.querySelectorAll('[data-jump]').forEach(btn=>{
     showStep(btn.dataset.jump);
   });
 });
-// step dots double as shortcuts once a step has been visited
+// step dots always work as direct shortcuts to any page
 document.querySelectorAll('.step-dot').forEach(dot=>{
   dot.style.cursor = 'pointer';
   dot.addEventListener('click', async ()=>{
-    if(dot.classList.contains('active') || dot.classList.contains('done')){
-      await saveCurrentStepIfNeeded();
-      returnToResults = false;
-      showStep(dot.dataset.step);
-    }
+    await saveCurrentStepIfNeeded();
+    returnToResults = false;
+    showStep(dot.dataset.step);
   });
 });
 
