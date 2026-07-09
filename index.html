@@ -4,20 +4,20 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Biomarq — Longevity Tracker</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cg transform='rotate(-90 20 20)'%3E%3Ccircle cx='20' cy='20' r='16' fill='none' stroke='%23E3DFD6' stroke-width='3'/%3E%3Ccircle cx='20' cy='20' r='16' fill='none' stroke='%236B2737' stroke-width='3' stroke-linecap='round' stroke-dasharray='75 100.5'/%3E%3Ccircle cx='20' cy='20' r='10' fill='none' stroke='%23E3DFD6' stroke-width='3'/%3E%3Ccircle cx='20' cy='20' r='10' fill='none' stroke='%23A9832E' stroke-width='3' stroke-linecap='round' stroke-dasharray='47 62.8'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cg transform='rotate(-90 20 20)'%3E%3Ccircle cx='20' cy='20' r='16' fill='none' stroke='%23DEE1E5' stroke-width='3'/%3E%3Ccircle cx='20' cy='20' r='16' fill='none' stroke='%232C4A6B' stroke-width='3' stroke-linecap='round' stroke-dasharray='75 100.5'/%3E%3Ccircle cx='20' cy='20' r='10' fill='none' stroke='%23DEE1E5' stroke-width='3'/%3E%3Ccircle cx='20' cy='20' r='10' fill='none' stroke='%237C8CA3' stroke-width='3' stroke-linecap='round' stroke-dasharray='47 62.8'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600;6..72,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <style>
   :root{
-    --bg: #F5F3EE;
-    --ink: #201B1E;
-    --pine: #6B2737;
-    --pine-dark: #4E1C28;
-    --amber: #A9832E;
-    --sage: #7A756E;
-    --line: #E3DFD6;
+    --bg: #F3F4F6;
+    --ink: #1E232B;
+    --pine: #2C4A6B;
+    --pine-dark: #1D3350;
+    --amber: #7C8CA3;
+    --sage: #6B7280;
+    --line: #DEE1E5;
     --card: #FFFFFF;
     --danger: #A23B3B;
     --good: #3F6B52;
@@ -177,7 +177,7 @@
     display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;font-family:'Inter',sans-serif;
   }
   .tag-good{background:#EAF1EC;color:var(--good);}
-  .tag-mid{background:#F8F1DE;color:var(--amber);}
+  .tag-mid{background:#EDEFF2;color:var(--amber);}
   .tag-low{background:#F7EAE8;color:var(--danger);}
 
   .toast{
@@ -216,7 +216,7 @@
   }
   .insight-card:last-child{margin-bottom:0;}
   .insight-card.severity-high{background:#F7EAE8;border-color:#E3C6C2;}
-  .insight-card.severity-mid{background:#F8F1DE;border-color:#EAD9AE;}
+  .insight-card.severity-mid{background:#EDEFF2;border-color:#D7DCE2;}
   .insight-card.severity-good{background:#EAF1EC;border-color:#CBDDD1;}
   .insight-icon{font-family:'Newsreader',serif;font-weight:700;font-size:18px;flex-shrink:0;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;}
   .severity-high .insight-icon{background:var(--danger);}
@@ -275,7 +275,7 @@
   .status-neutral{background:var(--sage);}
 
   /* ---- Disease risk context ---- */
-  .disclaimer-box{background:#F8F1DE;border:1px solid #EAD9AE;border-radius:10px;padding:14px 16px;font-size:13px;margin-bottom:18px;color:var(--ink);}
+  .disclaimer-box{background:#EDEFF2;border:1px solid #D7DCE2;border-radius:10px;padding:14px 16px;font-size:13px;margin-bottom:18px;color:var(--ink);}
   .risk-card{border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin-bottom:14px;}
   .risk-card:last-child{margin-bottom:0;}
   .risk-card-title{font-family:'Newsreader',serif;font-weight:600;font-size:15px;margin-bottom:6px;}
@@ -294,7 +294,7 @@
 <div id="home-screen">
   <div class="home-inner">
     <div class="brand" style="margin-bottom:40px;">
-      <svg class="brand-mark" viewBox="0 0 40 40"><g transform="rotate(-90 20 20)"><circle cx="20" cy="20" r="16" fill="none" stroke="var(--line)" stroke-width="3"/><circle cx="20" cy="20" r="16" fill="none" stroke="#6B2737" stroke-width="3" stroke-linecap="round" stroke-dasharray="75 100.5"/><circle cx="20" cy="20" r="10" fill="none" stroke="var(--line)" stroke-width="3"/><circle cx="20" cy="20" r="10" fill="none" stroke="#A9832E" stroke-width="3" stroke-linecap="round" stroke-dasharray="47 62.8"/></g></svg>
+      <svg class="brand-mark" viewBox="0 0 40 40"><g transform="rotate(-90 20 20)"><circle cx="20" cy="20" r="16" fill="none" stroke="var(--line)" stroke-width="3"/><circle cx="20" cy="20" r="16" fill="none" stroke="#2C4A6B" stroke-width="3" stroke-linecap="round" stroke-dasharray="75 100.5"/><circle cx="20" cy="20" r="10" fill="none" stroke="var(--line)" stroke-width="3"/><circle cx="20" cy="20" r="10" fill="none" stroke="#7C8CA3" stroke-width="3" stroke-linecap="round" stroke-dasharray="47 62.8"/></g></svg>
       <div>
         <div class="brand-name">Biomarq</div>
         <div class="brand-tag">LONGEVITY TRACKER</div>
@@ -327,7 +327,7 @@
 
 <div id="auth-screen" class="hidden">
   <div class="brand" style="justify-content:center;margin-bottom:24px;">
-    <svg class="brand-mark" viewBox="0 0 40 40"><g transform="rotate(-90 20 20)"><circle cx="20" cy="20" r="16" fill="none" stroke="var(--line)" stroke-width="3"/><circle cx="20" cy="20" r="16" fill="none" stroke="#6B2737" stroke-width="3" stroke-linecap="round" stroke-dasharray="75 100.5"/><circle cx="20" cy="20" r="10" fill="none" stroke="var(--line)" stroke-width="3"/><circle cx="20" cy="20" r="10" fill="none" stroke="#A9832E" stroke-width="3" stroke-linecap="round" stroke-dasharray="47 62.8"/></g></svg>
+    <svg class="brand-mark" viewBox="0 0 40 40"><g transform="rotate(-90 20 20)"><circle cx="20" cy="20" r="16" fill="none" stroke="var(--line)" stroke-width="3"/><circle cx="20" cy="20" r="16" fill="none" stroke="#2C4A6B" stroke-width="3" stroke-linecap="round" stroke-dasharray="75 100.5"/><circle cx="20" cy="20" r="10" fill="none" stroke="var(--line)" stroke-width="3"/><circle cx="20" cy="20" r="10" fill="none" stroke="#7C8CA3" stroke-width="3" stroke-linecap="round" stroke-dasharray="47 62.8"/></g></svg>
     <div>
       <div class="brand-name">Biomarq</div>
       <div class="brand-tag">LONGEVITY TRACKER</div>
@@ -369,7 +369,7 @@
 <div id="app" class="hidden">
   <div class="topbar">
     <div class="brand">
-      <svg class="brand-mark" viewBox="0 0 40 40"><g transform="rotate(-90 20 20)"><circle cx="20" cy="20" r="16" fill="none" stroke="var(--line)" stroke-width="3"/><circle cx="20" cy="20" r="16" fill="none" stroke="#6B2737" stroke-width="3" stroke-linecap="round" stroke-dasharray="75 100.5"/><circle cx="20" cy="20" r="10" fill="none" stroke="var(--line)" stroke-width="3"/><circle cx="20" cy="20" r="10" fill="none" stroke="#A9832E" stroke-width="3" stroke-linecap="round" stroke-dasharray="47 62.8"/></g></svg>
+      <svg class="brand-mark" viewBox="0 0 40 40"><g transform="rotate(-90 20 20)"><circle cx="20" cy="20" r="16" fill="none" stroke="var(--line)" stroke-width="3"/><circle cx="20" cy="20" r="16" fill="none" stroke="#2C4A6B" stroke-width="3" stroke-linecap="round" stroke-dasharray="75 100.5"/><circle cx="20" cy="20" r="10" fill="none" stroke="var(--line)" stroke-width="3"/><circle cx="20" cy="20" r="10" fill="none" stroke="#7C8CA3" stroke-width="3" stroke-linecap="round" stroke-dasharray="47 62.8"/></g></svg>
       <div>
         <div class="brand-name">Biomarq</div>
         <div class="brand-tag">LONGEVITY TRACKER</div>
@@ -762,8 +762,8 @@
       <div class="ring-wrap">
         <svg width="220" height="220" viewBox="0 0 220 220">
           <circle class="ring-bg" cx="110" cy="110" r="95"/>
-          <circle id="ring-biomarker" class="ring-seg" cx="110" cy="110" r="95" stroke="#6B2737" stroke-width="16" stroke-dasharray="0 597"/>
-          <circle id="ring-lifestyle" class="ring-seg" cx="110" cy="110" r="72" stroke="#A9832E" stroke-width="7" stroke-dasharray="0 452"/>
+          <circle id="ring-biomarker" class="ring-seg" cx="110" cy="110" r="95" stroke="#2C4A6B" stroke-width="16" stroke-dasharray="0 597"/>
+          <circle id="ring-lifestyle" class="ring-seg" cx="110" cy="110" r="72" stroke="#7C8CA3" stroke-width="7" stroke-dasharray="0 452"/>
         </svg>
         <div class="ring-center">
           <div class="ring-score" id="composite-score">—</div>
@@ -775,8 +775,8 @@
         <h2 id="hero-headline">Log your biomarkers to see your estimated biological age.</h2>
         <p id="hero-copy">Your labs drive this score — lifestyle and nutrition are supporting context.</p>
         <div class="ring-legend">
-          <div class="legend-item"><span class="legend-dot" style="background:#6B2737;"></span>Biomarker score — <span id="legend-bio">—</span></div>
-          <div class="legend-item"><span class="legend-dot" style="background:#A9832E;"></span>Lifestyle score — <span id="legend-life">—</span></div>
+          <div class="legend-item"><span class="legend-dot" style="background:#2C4A6B;"></span>Biomarker score — <span id="legend-bio">—</span></div>
+          <div class="legend-item"><span class="legend-dot" style="background:#7C8CA3;"></span>Lifestyle score — <span id="legend-life">—</span></div>
         </div>
       </div>
     </div>
@@ -1309,18 +1309,19 @@ document.getElementById('find-genetic-testing-btn').addEventListener('click', fu
 // check existing session on load
 (async ()=>{
   const { data } = await sb.auth.getSession();
-  if(data.session){
+  if(data.session && !currentUser){
     await initApp(data.session.user);
   }
 })();
 
-// catch sign-ins that happen via email confirmation / magic link redirect,
-// which land back on this page with a token in the URL rather than through
-// the login form
+// catch sign-ins that happen via OAuth (Google/Apple), email confirmation,
+// or magic link redirects, which land back on this page with a token in
+// the URL rather than through the login form. Supabase can report this as
+// either 'SIGNED_IN' or 'INITIAL_SESSION' depending on how the session was
+// detected, so both are handled the same way here.
 sb.auth.onAuthStateChange((event, session)=>{
-  if(event === 'SIGNED_IN' && session && !currentUser){
+  if((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session && !currentUser){
     initApp(session.user);
-    showToast('Email confirmed — you\'re logged in');
   }
   if(event === 'SIGNED_OUT'){
     currentUser = null;
@@ -2281,17 +2282,17 @@ function renderChart(biomarkers, habits, foodTotalsByDate, macroTargets){
         {
           label: 'Longevity score',
           data: compositeSeries,
-          borderColor: '#6B2737',
+          borderColor: '#2C4A6B',
           backgroundColor: 'rgba(47,93,80,0.08)',
           fill: true,
           tension: 0.3,
           pointRadius: 3,
-          pointBackgroundColor: '#6B2737',
+          pointBackgroundColor: '#2C4A6B',
         },
         {
           label: 'Lifestyle score',
           data: lifeSeries,
-          borderColor: '#A9832E',
+          borderColor: '#7C8CA3',
           borderDash: [4,4],
           fill: false,
           tension: 0.3,
@@ -2303,7 +2304,7 @@ function renderChart(biomarkers, habits, foodTotalsByDate, macroTargets){
       responsive: true,
       maintainAspectRatio: false,
       scales: {
-        y: { min:0, max:100, grid:{ color:'#E3DFD6' }, ticks:{ font:{ family:'IBM Plex Mono' } } },
+        y: { min:0, max:100, grid:{ color:'#DEE1E5' }, ticks:{ font:{ family:'IBM Plex Mono' } } },
         x: { grid:{ display:false }, ticks:{ font:{ family:'IBM Plex Mono' }, maxRotation:0, autoSkip:true, maxTicksLimit:6 } }
       },
       plugins: {
