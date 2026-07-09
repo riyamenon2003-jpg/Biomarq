@@ -2166,9 +2166,13 @@ function wireProximitySearchButton(btn, panelId, mapsQuery, directoryLabel, dire
     panel.innerHTML = `<div class="field-note">${loadingLabel}</div>`;
     btn.insertAdjacentElement('afterend', panel);
 
-    const directoryLink = `<a href="${directoryUrl}" target="_blank" rel="noopener" style="color:var(--pine-dark);font-weight:600;font-size:13px;">${directoryLabel} →</a>`;
+    const directoryExtra = directoryUrl
+      ? `<a href="${directoryUrl}" target="_blank" rel="noopener" style="color:var(--pine-dark);font-weight:600;font-size:13px;">${directoryLabel} →</a>`
+      : `<div class="field-note">No single specialty directory here — ask your primary care doctor for a referral, or check your insurance network's provider list.</div>`;
     const renderFallback = () => {
-      panel.innerHTML = `<div class="field-note" style="margin-bottom:10px;">Search a credentialed directory instead:</div>${directoryLink}`;
+      panel.innerHTML = directoryUrl
+        ? `<div class="field-note" style="margin-bottom:10px;">Search a credentialed directory instead:</div>${directoryExtra}`
+        : directoryExtra;
     };
 
     if(!navigator.geolocation){ renderFallback(); return; }
@@ -2179,8 +2183,7 @@ function wireProximitySearchButton(btn, panelId, mapsQuery, directoryLabel, dire
         panel.innerHTML = `
           <div class="field-note" style="margin-bottom:10px;">Here's a map of options near your current location:</div>
           <a href="${mapsUrl}" target="_blank" rel="noopener" class="btn btn-primary btn-sm" style="display:inline-block;text-decoration:none;">Open nearby results in Google Maps</a>
-          <div class="field-note" style="margin-top:14px;">Or search a credentialed directory instead:</div>
-          ${directoryLink}
+          <div style="margin-top:14px;">${directoryUrl ? `<div class="field-note" style="margin-bottom:8px;">Or search a credentialed directory instead:</div>${directoryExtra}` : directoryExtra}</div>
         `;
       },
       ()=>{ renderFallback(); },
@@ -2189,29 +2192,114 @@ function wireProximitySearchButton(btn, panelId, mapsQuery, directoryLabel, dire
   });
 }
 
-function renderNextSteps(habits, foodTotalsByDate, macroTargets){
+function avgOfField(items, field, n){
+  const recent = items.slice(-n).filter(h => h[field] !== null && h[field] !== undefined);
+  if(recent.length === 0) return null;
+  return recent.reduce((a,h)=>a+h[field],0) / recent.length;
+}
+
+// Directory info for each professional type — used to wire the
+// "find near me" button for whichever suggestions end up showing.
+const NEXT_STEP_DIRECTORIES = {
+  dietitian: { mapsQuery:'registered dietitian', label:'Academy of Nutrition and Dietetics — find a nutrition expert', url:'https://www.eatright.org/find-a-nutrition-expert', buttonLabel:'Find a dietitian near me' },
+  trainer: { mapsQuery:'personal trainer', label:'ACE Fitness — find a certified pro', url:'https://www.acefitness.org/resources/everyone/find-ace-pro/', buttonLabel:'Find a personal trainer near me' },
+  sleep: { mapsQuery:'sleep clinic', label:'AASM — accredited sleep center directory', url:'https://sleepeducation.org/sleep-center/', buttonLabel:'Find a sleep specialist near me' },
+  therapist: { mapsQuery:'therapist', label:'Psychology Today — find a therapist', url:'https://www.psychologytoday.com/us/therapists', buttonLabel:'Find a therapist near me' },
+  endocrinologist: { mapsQuery:'diabetes educator', label:'CBDCE — locate a certified diabetes care specialist', url:'https://www.cbdce.org/locate', buttonLabel:'Find a diabetes specialist near me' },
+  cardiologist: { mapsQuery:'cardiologist', label:null, url:null, buttonLabel:'Find a cardiologist near me' },
+  geneticCounselor: { mapsQuery:'genetic counselor', label:'NSGC — find a genetic counselor', url:'https://findageneticcounselor.nsgc.org/', buttonLabel:'Find a genetic counselor near me' },
+};
+
+function renderNextSteps(biomarkers, habits, foodTotalsByDate, macroTargets){
+  const latestBio = biomarkers[biomarkers.length-1];
   const latestHabit = habits[habits.length-1];
   const today = todayStr();
   const todayFood = foodTotalsByDate ? foodTotalsByDate[today] : null;
+  const profile = currentProfile || {};
   const suggestions = [];
 
+  // Diet
   if(todayFood){
     const dietScore = macroTargets ? computeDietGoalScore(todayFood, macroTargets) : computeDietBalanceScore(todayFood);
     if(dietScore !== null && dietScore < 70){
-      suggestions.push({
-        type: 'dietitian',
-        title: 'Consider working with a registered dietitian',
-        body: "Today's food log suggests your macros are off from where they'd ideally be. A registered dietitian can build a plan tailored to your own biomarkers and goals, well beyond what a general macro calculator can do.",
-      });
+      suggestions.push({ type:'dietitian', title:'Consider working with a registered dietitian',
+        body:"Today's food log suggests your macros are off from where they'd ideally be. A registered dietitian can build a plan tailored to your own biomarkers and goals, well beyond what a general macro calculator can do." });
     }
   }
 
+  // Exercise
   if(latestHabit && latestHabit.exercise_minutes !== null && latestHabit.exercise_minutes !== undefined && latestHabit.exercise_minutes < 20){
-    suggestions.push({
-      type: 'trainer',
-      title: 'Consider working with a personal trainer',
-      body: `You logged ${latestHabit.exercise_minutes} minutes of activity today. A certified personal trainer can help build a sustainable routine and keep you accountable, especially if getting started is the hardest part.`,
-    });
+    suggestions.push({ type:'trainer', title:'Consider working with a personal trainer',
+      body:`You logged ${latestHabit.exercise_minutes} minutes of activity today. A certified personal trainer can help build a sustainable routine and keep you accountable, especially if getting started is the hardest part.` });
+  }
+
+  // Sleep — needs a sustained pattern over the last week, not just one off night
+  const avgSleep = avgOfField(habits, 'sleep_hours', 7);
+  if(avgSleep !== null && (avgSleep < 6.5 || avgSleep > 9.5) && habits.slice(-7).length >= 3){
+    suggestions.push({ type:'sleep', title:'Consider seeing a sleep specialist',
+      body:`Your average sleep over recent entries is ${avgSleep.toFixed(1)} hours, outside the range most healthspan research points to. If this has been a consistent pattern rather than a rough week, an accredited sleep center can check for things like sleep apnea or insomnia that a habit tracker can't diagnose.` });
+  }
+
+  // Stress — same idea, sustained rather than a single bad day
+  const avgStress = avgOfField(habits, 'stress_level', 5);
+  if(avgStress !== null && avgStress >= 4 && habits.slice(-5).length >= 3){
+    suggestions.push({ type:'therapist', title:'Consider talking to a therapist',
+      body:`Your stress level has averaged ${avgStress.toFixed(1)}/5 recently. Chronic stress is linked to both CRP and blood pressure over time, and a therapist can help build tools for it beyond what tracking alone offers.` });
+  }
+
+  // Primary care nudge — actual clinical thresholds, not just "above optimal"
+  if(latestBio){
+    const hyperglycemia = latestBio.fasting_glucose !== null && latestBio.fasting_glucose >= 126;
+    const hypertension = (latestBio.systolic !== null && latestBio.systolic >= 140) || (latestBio.diastolic !== null && latestBio.diastolic >= 90);
+    if(hyperglycemia || hypertension){
+      const parts = [];
+      if(hyperglycemia) parts.push(`fasting glucose of ${latestBio.fasting_glucose} mg/dL`);
+      if(hypertension) parts.push(`blood pressure of ${latestBio.systolic ?? '?'}/${latestBio.diastolic ?? '?'} mmHg`);
+      suggestions.push({ type:'doctor', title:'Talk to your doctor soon',
+        body:`Your ${parts.join(' and ')} is in a range that typically warrants medical follow-up, not just a lifestyle tweak. This isn't a diagnosis, but it's worth a call to your doctor rather than waiting for your next annual visit.` });
+    }
+
+    // Endocrinologist / diabetes educator — multiple metabolic markers together
+    const metabolicFlags = [
+      latestBio.fasting_glucose !== null && latestBio.fasting_glucose >= 100,
+      latestBio.hba1c !== null && latestBio.hba1c >= 5.7,
+      latestBio.fasting_insulin !== null && latestBio.fasting_insulin > 6,
+    ].filter(Boolean).length;
+    if(metabolicFlags >= 2){
+      suggestions.push({ type:'endocrinologist', title:'Consider a diabetes care and education specialist',
+        body:'More than one of your metabolic markers (glucose, HbA1c, fasting insulin) are elevated together, a stronger insulin-resistance signal than any single marker alone. A certified diabetes care and education specialist (or your doctor) can help build a plan before this progresses further.' });
+    }
+
+    // Cardiologist — multiple cardiovascular markers together
+    const cardioFlags = [
+      classifyBiomarker('ldl', latestBio.ldl) === 'high',
+      classifyBiomarker('apob', latestBio.apob) === 'high',
+      classifyBiomarker('systolic', latestBio.systolic) === 'high',
+      classifyBiomarker('diastolic', latestBio.diastolic) === 'high',
+    ].filter(Boolean).length;
+    if(cardioFlags >= 2){
+      suggestions.push({ type:'cardiologist', title:'Consider seeing a cardiologist',
+        body:'More than one cardiovascular marker is outside range at once, which carries more weight than any single elevated number. A cardiologist can combine these with a real risk calculator and decide if further testing (like a coronary calcium scan) makes sense.' });
+    }
+
+    // "It's been a while" nudge
+    const daysSinceLastBio = Math.floor((new Date(today) - new Date(latestBio.date)) / (1000*60*60*24));
+    if(daysSinceLastBio >= 60){
+      suggestions.push({ type:'checkin', title:"It's been a while since your last labs",
+        body:`Your most recent biomarker entry is from ${latestBio.date}, ${daysSinceLastBio} days ago. Trends matter more than any single reading here, worth scheduling a follow-up panel if you haven't already.` });
+    }
+  }
+
+  // Genetic counselor — family history noted but no corresponding testing logged yet
+  const hasCancerHistoryNoTesting = profile.family_history_cancer && latestBio &&
+    [latestBio.psa, latestBio.ca125, latestBio.cea, latestBio.ca199, latestBio.afp, latestBio.mcd_result].every(v => v === null || v === undefined || v === '');
+  const hasAlzHistoryNoTesting = profile.family_history_alzheimers && !profile.apoe4_status;
+  if(hasCancerHistoryNoTesting || hasAlzHistoryNoTesting){
+    const parts = [];
+    if(hasCancerHistoryNoTesting) parts.push('a family history of cancer without any tumor markers or genetic testing logged yet');
+    if(hasAlzHistoryNoTesting) parts.push("a family history of Alzheimer's without an APOE4 test on file");
+    suggestions.push({ type:'geneticCounselor', title:'Consider talking to a genetic counselor',
+      body:`You've noted ${parts.join(', and ')}. A genetic counselor can help you decide whether testing makes sense for you and what the results would actually mean, before you order anything.` });
   }
 
   const listEl = document.getElementById('next-steps-list');
@@ -2225,26 +2313,19 @@ function renderNextSteps(habits, foodTotalsByDate, macroTargets){
   emptyEl.classList.add('hidden');
 
   suggestions.forEach((s, i)=>{
+    const dir = NEXT_STEP_DIRECTORIES[s.type];
     const btnId = `next-step-btn-${i}`;
     const div = document.createElement('div');
     div.className = 'risk-card';
     div.innerHTML = `
       <div class="risk-card-title">${s.title}</div>
       <div class="risk-card-body">${s.body}</div>
-      <button type="button" class="btn btn-ghost btn-sm" id="${btnId}" style="margin-top:6px;">
-        ${s.type === 'dietitian' ? 'Find a dietitian near me' : 'Find a personal trainer near me'}
-      </button>
+      ${dir ? `<button type="button" class="btn btn-ghost btn-sm" id="${btnId}" style="margin-top:6px;">${dir.buttonLabel}</button>` : ''}
     `;
     listEl.appendChild(div);
-    const btn = document.getElementById(btnId);
-    if(s.type === 'dietitian'){
-      wireProximitySearchButton(btn, 'dietitian-finder-panel', 'registered dietitian',
-        'Academy of Nutrition and Dietetics — find a nutrition expert', 'https://www.eatright.org/find-a-nutrition-expert',
-        'Looking for dietitians near you…');
-    } else {
-      wireProximitySearchButton(btn, 'trainer-finder-panel', 'personal trainer',
-        'ACE Fitness — find a certified pro', 'https://www.acefitness.org/resources/everyone/find-ace-pro/',
-        'Looking for personal trainers near you…');
+    if(dir){
+      const btn = document.getElementById(btnId);
+      wireProximitySearchButton(btn, `${s.type}-finder-panel`, dir.mapsQuery, dir.label, dir.url, `Looking for options near you…`);
     }
   });
 }
@@ -2269,7 +2350,7 @@ function renderStep(stepName, data){
     renderBiomarkerInsights(biomarkers);
     renderLifestyleInsights(habits, foodTotalsByDate, macroTargets);
     renderDiseaseRiskContext(biomarkers);
-    renderNextSteps(habits, foodTotalsByDate, macroTargets);
+    renderNextSteps(biomarkers, habits, foodTotalsByDate, macroTargets);
   }
 }
 
