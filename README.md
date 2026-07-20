@@ -2,7 +2,7 @@
 
 A biomarker-first longevity tracker. Log your bloodwork and it turns it into an estimated biological age, specific suggestions for anything out of range, and honest research context on cardiometabolic, cardiovascular, cognitive, and cancer risk. Lifestyle and nutrition are tracked too, as supporting context, not the headline.
 
-Live app: `[https://riyamenon2003-jpg.github.io/Biomarq/]`
+Live app: `https://riyamenon2003-jpg.github.io/Biomarq/`
 
 ## What it does
 
